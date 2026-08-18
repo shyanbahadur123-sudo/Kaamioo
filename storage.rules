@@ -1,0 +1,67 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isAuthenticated() && request.auth.uid == uid;
+    }
+
+    function isImage() {
+      return request.resource.contentType == 'image/jpeg'
+          || request.resource.contentType == 'image/png'
+          || request.resource.contentType == 'image/webp';
+    }
+
+    function isPDFOrDocument() {
+      return request.resource.contentType == 'application/pdf'
+        || request.resource.contentType == 'application/msword'
+        || request.resource.contentType == 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+    }
+
+    function isValidSize(maxMegaBytes) {
+      return request.resource.size < maxMegaBytes * 1024 * 1024;
+    }
+
+    match /users/{uid}/profile_pics/{allPaths=**} {
+      allow read: if isAuthenticated();
+      allow write: if isOwner(uid) && isImage() && isValidSize(5);
+    }
+
+    match /kyc/{uid}/{allPaths=**} {
+      allow read: if isOwner(uid);
+      // create covers the first submission; update covers re-submission after a
+      // "resubmit" review (same uid path, new document file).
+      allow create: if isOwner(uid) && (isImage() || isPDFOrDocument()) && isValidSize(10);
+      allow update: if isOwner(uid) && (isImage() || isPDFOrDocument()) && isValidSize(10);
+    }
+
+    match /community/{postId}/{allPaths=**} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isImage() && isValidSize(15);
+    }
+
+    match /chats/{conversationId}/{allPaths=**} {
+      // Unused storage path removed to avoid a broad read/write aperture.
+      // Chat images are stored under /chat_images and gated to the owner's uid
+      // via path prefix (conversation membership is enforced at Firestore).
+      allow read, write: if false;
+    }
+
+    match /chat_images/{fileName} {
+      // Attachments are named "chat_{uploaderUid}_{timestamp}.jpg". Reads are
+      // open to any authenticated user because conversation membership is
+      // enforced at the Firestore message layer (a message doc is only visible
+      // to its participantIds), and the filename embeds the uploader's uid so
+      // URLs are not enumerable by non-participants in practice.
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated()
+        && fileName.startsWith('chat_' + request.auth.uid + '_')
+        && isImage()
+        && isValidSize(10);
+    }
+  }
+}

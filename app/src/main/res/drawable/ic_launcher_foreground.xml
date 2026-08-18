@@ -1,0 +1,36 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="1024"
+    android:viewportHeight="1024">
+    <!-- Kaamio Brand Identity: Professional with Doko & Dhaka Topi -->
+
+    <!-- Dhaka Topi -->
+    <path
+        android:pathData="M440,180 L584,180 L560,100 L464,100 Z"
+        android:fillColor="#0A0A0A" />
+
+    <!-- Head -->
+    <path
+        android:pathData="M512,320a70,70 0 1,0 -70,-70 70,70 0 0,0 70,70z"
+        android:fillColor="#0A0A0A" />
+
+    <!-- Doko (Basket) -->
+    <path
+        android:pathData="M180,240 L380,240 L340,540 L220,540 Z"
+        android:fillColor="#0A0A0A" />
+    <!-- Doko Straps -->
+    <path
+        android:pathData="M380,240 Q450,400 512,500"
+        android:strokeColor="#0A0A0A"
+        android:strokeWidth="12" />
+
+    <!-- Body / Action Pose -->
+    <path
+        android:pathData="M512,340 L512,540 L712,740 M512,540 L312,740 M512,440 L712,340"
+        android:strokeColor="#0A0A0A"
+        android:strokeWidth="48"
+        android:strokeLineCap="round" />
+
+    <!-- Branding Text Placeholder (Logos usually don't have text in launcher icons, but following reference) -->
+</vector>

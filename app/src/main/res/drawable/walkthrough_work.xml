@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="480dp"
+    android:height="380dp"
+    android:viewportWidth="480"
+    android:viewportHeight="380">
+
+    <!-- Background -->
+    <path
+        android:fillColor="#0E1630"
+        android:pathData="M0,0h480v380h-480z" />
+
+    <!-- Large soft glow circles -->
+    <path
+        android:fillColor="#33A1FF"
+        android:fillAlpha="0.22"
+        android:pathData="M120,60a170,170 0 1,0 340,0a170,170 0 1,0 -340,0" />
+    <path
+        android:fillColor="#32D74B"
+        android:fillAlpha="0.16"
+        android:pathData="M-40,240a150,150 0 1,0 300,0a150,150 0 1,0 -300,0" />
+
+    <!-- Card -->
+    <path
+        android:fillColor="#1B2440"
+        android:pathData="M90,90h300v200h-300z" />
+    <path
+        android:fillColor="#263154"
+        android:pathData="M90,90h300v46h-300z" />
+
+    <!-- Person -->
+    <path
+        android:fillColor="#33A1FF"
+        android:pathData="M225,150a34,34 0 1,0 68,0a34,34 0 1,0 -68,0" />
+    <path
+        android:fillColor="#33A1FF"
+        android:pathData="M200,240c0,-34 28,-56 59,-56s59,22 59,56z" />
+
+    <!-- Money lines -->
+    <path
+        android:fillColor="#FFD60A"
+        android:pathData="M320,160l44,0l-10,14l44,0" />
+</vector>

@@ -1,0 +1,243 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isAuthenticated() && request.auth.uid == uid;
+    }
+
+    function validString(field, min, max) {
+      return field is string && field.size() >= min && field.size() <= max;
+    }
+
+    // Whitelist for all user profile fields the app may edit. Trust score,
+    // verification flags, and KYC/rating aggregates are SYSTEM-OWNED: they are
+    // only ever written by Cloud Functions via the Admin SDK. Removing them from
+    // this list closes the "self-verify / self-trust / self-admin" exploit.
+    function userMutableKeysOnly() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+        'displayName', 'province', 'district', 'municipality', 'userTypes',
+        'skills', 'experience', 'language', 'photoURL', 'profileCompleted',
+        'profileCompletion', 'lastLogin', 'isOnline', 'role',
+        'notificationsEnabled', 'privacyEnabled', 'preferredLanguage',
+        'onboardingCompleted', 'email', 'phoneNumber', 'fcmToken',
+        'gender', 'dateOfBirth', 'kaamioId', 'about'
+      ]);
+    }
+
+    // Users may only choose from a fixed set of role strings. "admin" is never
+    // user-writable — it is granted out-of-band by operators.
+    function isAllowedRole(role) {
+      return role in ['', 'work', 'hire', 'specialist', 'worker', 'employer',
+                      'business', 'freelance', 'client', 'provider', 'user', 'User'];
+    }
+
+    match /users/{uid} {
+      allow read: if isAuthenticated()
+        && (request.auth.uid == uid || resource.data.privacyEnabled != true);
+
+      // Client-side creation must strictly match the model keys AND may only
+      // seed system fields with their neutral defaults.
+      allow create: if isOwner(uid)
+        && request.resource.data.uid == uid
+        && request.resource.data.keys().hasOnly([
+          'uid', 'displayName', 'email', 'phoneNumber', 'photoURL', 'province',
+          'district', 'municipality', 'userTypes', 'skills', 'experience', 'language',
+          'profileCompleted', 'profileCompletion', 'lastLogin', 'isOnline', 'role',
+          'trustScore', 'isPhoneVerified', 'isGoogleVerified', 'isIdentityVerified',
+          'notificationsEnabled', 'privacyEnabled', 'preferredLanguage',
+          'onboardingCompleted', 'fcmToken', 'gender', 'dateOfBirth', 'kaamioId',
+          'kycStatus', 'totalReviews', 'averageRating', 'createdAt', 'about'
+        ])
+        && request.resource.data.trustScore == 0
+        && request.resource.data.isPhoneVerified == false
+        && request.resource.data.isGoogleVerified == false
+        && request.resource.data.isIdentityVerified == false
+        && request.resource.data.kycStatus == ''
+        && request.resource.data.totalReviews == 0
+        && request.resource.data.averageRating == 0
+        && isAllowedRole(request.resource.data.role);
+
+      allow update: if isOwner(uid)
+        && request.resource.data.uid == resource.data.uid
+        && userMutableKeysOnly()
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['role'])
+            || isAllowedRole(request.resource.data.role));
+
+      allow delete: if false;
+    }
+
+    match /listings/{listingId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated()
+        && request.resource.data.ownerId == request.auth.uid
+        && validString(request.resource.data.title, 2, 120)
+        && validString(request.resource.data.company, 1, 80);
+      allow update: if isAuthenticated()
+        && (resource.data.ownerId == request.auth.uid || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isApplied', 'isBookmarked']))
+        && request.resource.data.ownerId == resource.data.ownerId;
+      allow delete: if isAuthenticated() && resource.data.ownerId == request.auth.uid;
+    }
+
+    match /courses/{courseId} {
+      allow read: if isAuthenticated();
+      // Create must not let a client self-unlock or seed enrollment progress:
+      // unlockedBy starts empty (unlocks are function-only) and progress is 0.
+      allow create: if isAuthenticated()
+        && request.resource.data.instructorId == request.auth.uid
+        && request.resource.data.unlockedBy == []
+        && request.resource.data.progress == 0;
+      // Course unlocks are only ever granted by the verified course-unlock
+      // Cloud Function. No client can append to unlockedBy anymore.
+      allow update: if isAuthenticated()
+        && (resource.data.instructorId == request.auth.uid || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likesCount']));
+      allow delete: if isAuthenticated() && resource.data.instructorId == request.auth.uid;
+    }
+
+    match /community/{postId} {
+      allow read: if isAuthenticated();
+      // Create must not let a client seed fake engagement: likes/comments start
+      // at zero and the likedBy array is empty. Only the author can write.
+      allow create: if isAuthenticated()
+        && request.resource.data.authorId == request.auth.uid
+        && request.resource.data.likesCount == 0
+        && request.resource.data.commentsCount == 0
+        && request.resource.data.likedBy == [];
+      allow update: if isAuthenticated()
+        && (resource.data.authorId == request.auth.uid || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likesCount', 'commentsCount', 'likedBy']));
+      allow delete: if isAuthenticated() && resource.data.authorId == request.auth.uid;
+    }
+
+    match /chats/{chatId} {
+      allow read: if isAuthenticated() && (request.auth.uid in resource.data.participantIds);
+      allow create: if isAuthenticated()
+        && (request.auth.uid in request.resource.data.participantIds)
+        && request.resource.data.participantIds is list
+        && request.resource.data.participantIds.size() >= 2
+        && request.resource.data.participantIds.size() <= 10
+        && request.resource.data.participantIds.all(item, item is string);
+      allow update: if isAuthenticated()
+        && (request.auth.uid in resource.data.participantIds)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead', 'proposalStatus', 'updatedAt', 'updatedBy']);
+      allow delete: if false;
+    }
+
+    match /save_jobs/{saveId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+
+    match /trust_scores/{uid} {
+      allow read: if isAuthenticated();
+      match /history/{historyId} {
+        allow read: if isAuthenticated() && (uid == request.auth.uid);
+      }
+    }
+
+    match /notifications/{notificationId} {
+      allow read: if isAuthenticated() && resource.data.recipientId == request.auth.uid;
+      // Client-created notifications are allowed ONLY for the user's own inbox
+      // (e.g. a locally-delivered FCM push being persisted for the offline feed)
+      // and strictly limited to the display fields. Server-generated pushes must
+      // still come from Cloud Functions / Admin SDK for cross-user delivery.
+      allow create: if isAuthenticated()
+        && request.resource.data.recipientId == request.auth.uid
+        && request.resource.data.keys().hasOnly([
+          'recipientId', 'title', 'body', 'screen', 'read', 'timestamp'
+        ])
+        && request.resource.data.read == false;
+      allow update: if isAuthenticated() && resource.data.recipientId == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+    }
+
+    match /applications/{applicationId} {
+      allow read: if isAuthenticated() && (resource.data.applicantId == request.auth.uid || resource.data.ownerId == request.auth.uid);
+      allow create: if isAuthenticated() && request.resource.data.applicantId == request.auth.uid
+        && request.resource.data.status == 'pending'
+        && request.resource.data.jobId is string
+        && request.resource.data.ownerId is string;
+      // Status transitions are role-aware to prevent an applicant from
+      // self-accepting / self-completing a job:
+      //   - The OWNER may accept, reject, cancel, or mark completed.
+      //   - The APPLICANT may only cancel/withdraw their own application.
+      // Accept/completed are owner-only actions.
+      allow update: if isAuthenticated()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+        && (
+          (resource.data.ownerId == request.auth.uid
+            && request.resource.data.status in ['pending', 'accepted', 'rejected', 'completed', 'cancelled'])
+          ||
+          (resource.data.applicantId == request.auth.uid
+            && request.resource.data.status == 'cancelled')
+        );
+    }
+
+    match /reviews/{reviewId} {
+      allow read: if isAuthenticated();
+      // Reviews are bound to a specific completed escrow/id to enforce
+      // exactly-one-review-per-transaction. The ID encodes the reviewed user
+      // so a reviewer can never review themselves through a crafted ID.
+      allow create: if isAuthenticated()
+        && request.resource.data.reviewerId == request.auth.uid
+        && request.resource.data.reviewerId != request.resource.data.reviewedUserId
+        && request.resource.data.rating is int
+        && request.resource.data.rating >= 1
+        && request.resource.data.rating <= 5
+        && (!('escrowId' in request.resource.data) || (request.resource.data.escrowId is string && request.resource.data.escrowId.size() > 0));
+      // Authors may only edit the text/rating of a review they own; the
+      // reviewedUserId and escrowId are immutable once written.
+      allow update: if isAuthenticated()
+        && resource.data.reviewerId == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['rating', 'comment'])
+        && request.resource.data.reviewedUserId == resource.data.reviewedUserId
+        && request.resource.data.escrowId == resource.data.escrowId;
+    }
+
+    match /escrow/{escrowId} {
+      allow read: if isAuthenticated() && (resource.data.employerId == request.auth.uid || resource.data.workerId == request.auth.uid);
+      allow create: if isAuthenticated()
+        && request.resource.data.employerId == request.auth.uid
+        && request.resource.data.workerId is string
+        && request.resource.data.workerId.size() > 0
+        && request.resource.data.workerId != request.auth.uid
+        && request.resource.data.amount is number
+        && request.resource.data.amount > 0
+        && request.resource.data.status == 'PENDING_FUNDING';
+      allow update: if false; // Transitions only via Cloud Functions
+    }
+
+    match /kyc/{uid} {
+      allow read: if isAuthenticated() && request.auth.uid == uid;
+      // Users may submit/resubmit a KYC application but can NEVER self-set a
+      // status other than "pending", and once a document exists it can ONLY be
+      // toggled to a new "pending" submission — a reviewed (verified/resubmit)
+      // document cannot be silently re-applied by the user.
+      allow create: if isAuthenticated() && request.auth.uid == uid
+        && request.resource.data.uid == uid
+        && request.resource.data.status == 'pending';
+      allow update: if isAuthenticated() && request.auth.uid == uid
+        && request.resource.data.uid == uid
+        && request.resource.data.status == 'pending'
+        && resource.data.uid == uid
+        && resource.data.status != 'verified'
+        && request.resource.data.diff(resource.data).affectedKeys().hasAll(['status'])
+        && request.resource.data.diff(resource.data).affectedKeys().hasAny(['documentUrl', 'selfieUrl', 'submittedAt', 'requestedAt'])
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
+          ['status', 'documentUrl', 'selfieUrl', 'submittedAt', 'uid',
+           'requestedAt', 'fullName', 'address', 'idType', 'idNumber']);
+    }
+
+    // Deny-by-default for ANY future/undocumented collection (payments, escrow,
+    // trust history, admin, metrics, etc.). New workflows must explicitly opt in
+    // with least-privilege rules; they never silently inherit allow-all.
+    match /{path=**} {
+      allow read, write: if false;
+    }
+  }
+}

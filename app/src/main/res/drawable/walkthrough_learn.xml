@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="480dp"
+    android:height="380dp"
+    android:viewportWidth="480"
+    android:viewportHeight="380">
+
+    <path
+        android:fillColor="#0E1630"
+        android:pathData="M0,0h480v380h-480z" />
+
+    <path
+        android:fillColor="#32D74B"
+        android:fillAlpha="0.2"
+        android:pathData="M180,30a160,160 0 1,0 320,0a160,160 0 1,0 -320,0" />
+    <path
+        android:fillColor="#33A1FF"
+        android:fillAlpha="0.15"
+        android:pathData="M-60,220a140,140 0 1,0 280,0a140,140 0 1,0 -280,0" />
+
+    <!-- Book/course card -->
+    <path
+        android:fillColor="#1B2440"
+        android:pathData="M100,90h280v210h-280z" />
+    <path
+        android:fillColor="#263154"
+        android:pathData="M120,110h120v40h-120z" />
+    <path
+        android:fillColor="#263154"
+        android:pathData="M120,170h180v14h-180z" />
+    <path
+        android:fillColor="#263154"
+        android:pathData="M120,198h150v14h-150z" />
+    <path
+        android:fillColor="#263154"
+        android:pathData="M120,226h160v14h-160z" />
+
+    <!-- Play button -->
+    <path
+        android:fillColor="#32D74B"
+        android:pathData="M340,210a38,38 0 1,0 76,0a38,38 0 1,0 -76,0" />
+    <path
+        android:fillColor="#0E1630"
+        android:pathData="M355,196l26,14l-26,14z" />
+
+    <!-- Trophy -->
+    <path
+        android:fillColor="#FFD60A"
+        android:pathData="M180,280l6,-30l12,0l6,30l-12,4z" />
+    <path
+        android:fillColor="#FFD60A"
+        android:pathData="M168,250a12,12 0 1,0 0,-24a12,12 0 1,0 0,24" />
+    <path
+        android:fillColor="#FFD60A"
+        android:pathData="M216,250a12,12 0 1,0 0,-24a12,12 0 1,0 0,24" />
+</vector>

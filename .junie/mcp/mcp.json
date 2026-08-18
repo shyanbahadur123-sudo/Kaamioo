@@ -1,0 +1,7 @@
+{
+    "mcpServers": {
+        "Asana": {
+            "url": "https://mcp.asana.com/sse"
+        }
+    }
+}

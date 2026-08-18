@@ -1,0 +1,6 @@
+{
+  "name": "KAAMIO",
+  "description": "Nepal's trusted all-in-one workforce ecosystem connecting students, freelancers, local trade workers, and office professionals.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

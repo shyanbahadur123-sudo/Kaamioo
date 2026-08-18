@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="256dp"
+    android:height="256dp"
+    android:viewportWidth="256"
+    android:viewportHeight="256">
+
+    <path
+        android:fillColor="#0E1630"
+        android:pathData="M0,0h256v256h-256z" />
+
+    <!-- Person silhouette -->
+    <path
+        android:fillColor="#33A1FF"
+        android:pathData="M128,52a44,44 0 1,0 0,88a44,44 0 1,0 0,-88" />
+    <path
+        android:fillColor="#33A1FF"
+        android:fillAlpha="0.85"
+        android:pathData="M56,224c0,-46 32,-76 72,-76s72,30 72,76z" />
+</vector>
